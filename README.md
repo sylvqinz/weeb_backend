@@ -1,8 +1,8 @@
 # Workflow Git
 
 ## Branches principales
-- `main` → production 
--  `dev` → intégration des nouvelles fonctionnalités
+`main` → production 
+`dev` → intégration des nouvelles fonctionnalités
 
 
 ## Développement d’une feature
