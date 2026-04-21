@@ -14,8 +14,8 @@
 
 → Créer une nouvelle branche :
 
-git checkout -b feature/nom-de-la-feature
-Développement de la fonctionnalité et commit des changements
+- git checkout -b feature/nom-de-la-feature
+- Développement de la fonctionnalité et commit des changements
 
 → Push la branche :
 git push origin feature/nom-de-la-feature
