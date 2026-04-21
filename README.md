@@ -18,10 +18,10 @@
 - Développement de la fonctionnalité et commit des changements
 
 → Push la branche :
-git push origin feature/nom-de-la-feature
+- git push origin feature/nom-de-la-feature
 
 → Ouvrir une Pull Request :
-Source : feature/nom-de-la-feature
-Target : dev
-Après review et validation → merge dans `dev`
+- Source : feature/nom-de-la-feature
+- Target : dev
+- Après review et validation → merge dans `dev`
 
