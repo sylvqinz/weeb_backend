@@ -24,4 +24,6 @@
 - Source : feature/nom-de-la-feature
 - Target : dev
 - Après review et validation → merge dans `dev`
+- Suppression de la branche feature
+- Close issue
 
