@@ -1,12 +1,11 @@
-# weeb_backend
-## Workflow Git
+# Workflow Git
 
-### Branches principales
+## Branches principales
 - `main` → production 
 -  `dev` → intégration des nouvelles fonctionnalités
 
 
-### Développement d’une feature
+## Développement d’une feature
 
 → Se placer sur la branche `dev` et la mettre à jour :
 
