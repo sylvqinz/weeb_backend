@@ -9,8 +9,8 @@
 
 → Se placer sur la branche `dev` et la mettre à jour :
 
-git checkout dev
-git pull
+- git checkout dev
+- git pull
 
 → Créer une nouvelle branche :
 
