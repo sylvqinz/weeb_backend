@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,7 +24,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-=s4&endsmr@hb7j@v)^*1dvl(a9s@@2c2i1wjt^d2@dy=iyt-b'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Lisez la variable DEBUG. Le `default=False` s'assure qu'en production
+# (où la variable ne sera peut-être pas définie), le mode DEBUG est désactivé.
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = []
 
@@ -74,11 +77,18 @@ WSGI_APPLICATION = 'weeb_backend.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME'),
+            'USER': config('DB_USER'),
+            'PASSWORD': config('DB_PASSWORD'),
+            'HOST': config('DB_HOST'),
+            'PORT': config('DB_PORT', cast=int),
+            'OPTIONS': {
+                'sslmode': 'require',
+            },
+        }
     }
-}
 
 
 # Password validation
