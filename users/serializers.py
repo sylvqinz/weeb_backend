@@ -64,18 +64,6 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
 
-        password = validated_data.pop('password')
         validated_data.pop('password_confirm')
 
-        user = User.objects.create_user(password = password, **validated_data)
-
-        token = CustomTokenObtainPairSerializer.get_token(user)
-
-        return {
-            "message": "Utilisateur créé avec succès",
-            "user": UserSerializer(user).data,
-            "tokens": {
-                "access": str(token.access_token),
-                "refresh": str(token)
-            }
-        }
+        return User.objects.create_user(**validated_data)
