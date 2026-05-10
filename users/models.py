@@ -12,6 +12,8 @@ class CustomUserManager(BaseUserManager):
     def create_user(self, email, password, **extra_fields):
         if not email:
             raise ValueError(_("L'adresse email doit être renseignée."))
+        if not password:
+            raise ValueError(_("Le mot de passe doit être renseigné."))
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password) # Hache le mot de passe de façon sécurisée
