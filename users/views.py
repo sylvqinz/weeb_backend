@@ -1,5 +1,6 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import CustomTokenObtainPairSerializer, UserRegisterSerializer, UserSerializer
 
@@ -16,6 +17,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
         if response.status_code == 200:
             refresh_token = response.data.get("refresh")
+            access_token = response.data.get("access")
             response.set_cookie(
                 key="refresh_token",
                 value=refresh_token,
@@ -24,8 +26,11 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 samesite="Strict",
                 max_age=7 * 24 * 60 * 60
             )
-            del response.data["refresh"]
-            response.data["message"] = "Connexion réussie"
+            response.data = {
+                "message": "Connexion réussie",
+                "access": access_token,
+                "user": UserSerializer(request.user).data  # ← Ici !
+            }
 
         return response
 
@@ -37,21 +42,23 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # Sérialiseur crée l'user
+        # créer l'user
         user = serializer.save()
 
         # Vue gère les tokens et cookies
-        token = CustomTokenObtainPairSerializer.get_token(user)
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
 
         response = Response({
             "message": "Utilisateur créé avec succès",
             "user": UserSerializer(user).data,
-            "tokens": {"access": str(token.access_token)}
+            "access": access_token
         }, status=status.HTTP_201_CREATED)
 
         response.set_cookie(
             key="refresh_token",
-            value=str(token),
+            value=refresh_token,
             httponly=True,
             secure=True,
             samesite="Strict",
