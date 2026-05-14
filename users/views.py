@@ -13,12 +13,87 @@ from .serializers import CustomTokenObtainPairSerializer, UserRegisterSerializer
 User = get_user_model()
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
-    Vue personnalisée pour l'obtention de token qui utilise notre serializer personnalisé
-    pour inclure des informations supplémentaires dans le token.
+    Vue personnalisée pour l'obtention de tokens JWT d'authentification.
+    
+    Étend TokenObtainPairView de rest_framework_simplejwt en utilisant un serializer
+    personnalisé (CustomTokenObtainPairSerializer) qui enrichit les tokens JWT avec
+    des informations utilisateur supplémentaires (email, prénom, nom, statut staff).
+    
+    La méthode POST gère également la configuration du cookie refresh_token avec les
+    paramètres de sécurité appropriés (HttpOnly, Secure, SameSite).
+    
+    Attributes:
+        serializer_class (Serializer): CustomTokenObtainPairSerializer pour enrichir les tokens.
+    
+    Methods:
+        post: Traite les demandes de connexion et génère les tokens avec cookie.
+    
+    HTTP Methods:
+        POST: Endpoint pour l'authentification
+    
+    Example:
+        POST /users/login/
+        {
+            "email": "user@example.com",
+            "password": "SecurePass123!"
+        }
+        
+        Response 200:
+        {
+            "message": "Connexion réussie",
+            "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+            "user": {
+                "id": 1,
+                "email": "user@example.com",
+                "first_name": "John",
+                "last_name": "Doe",
+                "is_staff": false,
+                "is_active": true
+            }
+        }
     """
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
+        """
+        Authentifie l'utilisateur et génère les tokens JWT.
+        
+        Cette méthode traite les demandes de connexion en validant les identifiants
+        (email/password), génère les tokens JWT (access et refresh) via le serializer
+        parent, enrichit la réponse avec les données utilisateur, et définit le
+        cookie refresh_token avec les paramètres de sécurité appropriés.
+        
+        Args:
+            request (Request): Objet requête DRF contenant email et password.
+            *args: Arguments positionnels additionnels.
+            **kwargs: Arguments nommés additionnels.
+        
+        Returns:
+            Response: Réponse JSON 200 avec:
+                - message (str): Message de succès
+                - access (str): Token JWT d'accès à inclure dans Authorization header
+                - user (dict): Données utilisateur sérialisées (id, email, first_name, etc.)
+            
+            + Cookie "refresh_token" défini avec options de sécurité.
+        
+        Raises:
+            ValidationError: Si les identifiants sont invalides (401)
+            (Gérée par le serializer parent)
+        
+        Security:
+            - refresh_token cookie: HttpOnly=True, Secure=True, SameSite=Strict
+            - Durée du cookie: 7 jours
+        
+        Example:
+            >>> response = client.post('/users/login/', {
+            ...     'email': 'user@example.com',
+            ...     'password': 'password123'
+            ... })
+            >>> response.status_code
+            200
+            >>> response.data['access']
+            'eyJ0eXAiOiJKV1QiLCJhbGc...'
+        """
         response = super().post(request, *args, **kwargs)
 
         if response.status_code == 200:
@@ -42,9 +117,94 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 class RegisterView(generics.CreateAPIView):
+    """
+    Vue pour l'enregistrement (création) d'un nouvel utilisateur.
+    
+    Hérite de CreateAPIView de Django REST Framework. Reçoit les données d'inscription,
+    les valide via UserRegisterSerializer, crée l'utilisateur, génère les tokens JWT
+    (access et refresh), et configure le cookie refresh_token avec les paramètres
+    de sécurité appropriés.
+    
+    Attributes:
+        serializer_class (Serializer): UserRegisterSerializer pour valider et créer l'utilisateur.
+    
+    Methods:
+        create: Crée un nouvel utilisateur et génère les tokens JWT.
+    
+    HTTP Methods:
+        POST: Endpoint pour l'enregistrement
+    
+    Example:
+        POST /users/register/
+        {
+            "email": "newuser@example.com",
+            "password": "SecurePass123!",
+            "password_confirm": "SecurePass123!",
+            "first_name": "John",
+            "last_name": "Doe"
+        }
+        
+        Response 201:
+        {
+            "message": "Utilisateur créé avec succès",
+            "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+            "user": {
+                "id": 2,
+                "email": "newuser@example.com",
+                "first_name": "John",
+                "last_name": "Doe",
+                "is_staff": false,
+                "is_active": true
+            }
+        }
+    """
     serializer_class = UserRegisterSerializer
 
     def create(self, request, *args, **kwargs):
+        """
+        Crée un nouvel utilisateur et génère les tokens JWT pour la connexion automatique.
+        
+        Cette méthode valide les données d'inscription, crée l'utilisateur via le serializer,
+        génère immédiatement les tokens JWT (pour éviter une étape de connexion supplémentaire),
+        sérialise les données utilisateur, et configure le cookie refresh_token avec
+        les paramètres de sécurité appropriés.
+        
+        Args:
+            request (Request): Objet requête DRF contenant les données d'inscription.
+            *args: Arguments positionnels additionnels.
+            **kwargs: Arguments nommés additionnels.
+        
+        Returns:
+            Response: Réponse JSON 201 (Created) avec:
+                - message (str): Message de succès
+                - user (dict): Données utilisateur sérialisées
+                - access (str): Token JWT d'accès à inclure dans Authorization header
+            
+            + Cookie "refresh_token" défini avec options de sécurité.
+        
+        Raises:
+            ValidationError: Si les données d'inscription sont invalides (400)
+                - EMAIL_ALREADY_EXISTS: Email déjà utilisé
+                - PASSWORD_MISMATCH: Mots de passe non identiques
+                - WEAK_PASSWORD: Mot de passe trop faible
+        
+        Security:
+            - refresh_token cookie: HttpOnly=True, Secure=True, SameSite=Strict
+            - Durée du cookie: 7 jours
+            - Mot de passe haché de manière sécurisée via set_password()
+        
+        Example:
+            >>> response = client.post('/users/register/', {
+            ...     'email': 'newuser@example.com',
+            ...     'password': 'SecurePass123!',
+            ...     'password_confirm': 'SecurePass123!',
+            ...     'first_name': 'John'
+            ... })
+            >>> response.status_code
+            201
+            >>> response.data['user']['email']
+            'newuser@example.com'
+        """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -76,14 +236,80 @@ class RegisterView(generics.CreateAPIView):
 
 class RequestPasswordResetEmailView(generics.GenericAPIView):
     """
-    Première étape du reset password : l'utilisateur envoie son email.
-
-    POST /users/password-reset/request/
-    Body: {"email": "user@example.com"}
+    Vue pour demander une réinitialisation de mot de passe (première étape).
+    
+    Hérite de GenericAPIView. Reçoit l'email de l'utilisateur, valide son existence,
+    génère les éléments de réinitialisation (uidb64 et token), et envoie un lien
+    de confirmation par email (actuellement affiché en console pour les tests).
+    
+    Implémente une sécurité importante : la réponse est générique peu importe si
+    l'email existe ou non, cela empêche l'énumération d'utilisateurs (user enumeration attack).
+    
+    Attributes:
+        serializer_class (Serializer): PasswordResetRequestSerializer pour valider l'email.
+    
+    Methods:
+        post: Traite les demandes de réinitialisation de mot de passe.
+    
+    HTTP Methods:
+        POST: Endpoint pour demander la réinitialisation
+    
+    Example:
+        POST /users/password-reset/request/
+        {
+            "email": "user@example.com"
+        }
+        
+        Response 200:
+        {
+            "message": "Si un compte est associé à cet email, vous recevrez des instructions..."
+        }
     """
     serializer_class = PasswordResetRequestSerializer
 
     def post(self, request):
+        """
+        Traite la demande de réinitialisation de mot de passe.
+        
+        Cette méthode constitue la première étape du processus reset password :
+        1. Valide que l'email est au format correct
+        2. Cherche l'utilisateur (silencieusement, sans révéler son existence)
+        3. Si trouvé : génère les éléments du lien (uidb64 encodé en base64, token signé)
+        4. Construits l'URL complète pour le frontend React
+        5. Envoie un email avec le lien (TODO: intégrer vrai service d'email)
+        6. Retourne une réponse générique TOUJOURS (même si email inexistant)
+        
+        Cette approche sécurisée empêche l'énumération d'utilisateurs : un attaquant
+        ne peut pas deviner quels emails sont enregistrés en analysant les réponses.
+        
+        Args:
+            request (Request): Objet requête DRF contenant l'email.
+        
+        Returns:
+            Response: Réponse JSON 200 avec message générique, peu importe le résultat:
+                {
+                    "message": "Si un compte est associé à cet email, vous recevrez des instructions..."
+                }
+        
+        Note:
+            Le lien généré contient :
+            - uidb64: ID utilisateur encodé en base64 (URL-safe)
+            - token: Token cryptographique signé généré par Django
+            Format: {frontend_url}/reset-password?uidb64={uidb64}&token={token}
+        
+        TODO:
+            - Remplacer le print() par un vrai envoi d'email
+            - Intégrer un service SMTP (SendGrid, AWS SES, Django Mail, etc.)
+        
+        Example:
+            >>> response = client.post('/users/password-reset/request/', {
+            ...     'email': 'user@example.com'
+            ... })
+            >>> response.status_code
+            200
+            >>> response.data['message']
+            'Si un compte est associé à cet email, vous recevrez des instructions...'
+        """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -120,14 +346,91 @@ class RequestPasswordResetEmailView(generics.GenericAPIView):
 
 class PasswordResetConfirmView(generics.GenericAPIView):
     """
-    Deuxième étape du reset password : l'utilisateur confirme avec le nouveau password.
-
-    POST /users/password-reset/confirm/
-    Body: {"uidb64": "...", "token": "...", "password": "..."}
+    Vue pour confirmer et compléter la réinitialisation de mot de passe (deuxième étape).
+    
+    Hérite de GenericAPIView. Reçoit l'identifiant utilisateur encodé (uidb64),
+    le token de réinitialisation, et le nouveau mot de passe. Valide le token,
+    vérifie qu'il n'a pas expiré, puis met à jour le mot de passe de l'utilisateur.
+    
+    Attributes:
+        serializer_class (Serializer): PasswordResetConfirmSerializer pour valider les données.
+    
+    Methods:
+        post: Traite la confirmation de réinitialisation de mot de passe.
+    
+    HTTP Methods:
+        POST: Endpoint pour confirmer la réinitialisation
+    
+    Example:
+        POST /users/password-reset/confirm/
+        {
+            "uidb64": "MQ==",
+            "token": "abcd1234efgh5678-ijklmnopqr",
+            "password": "NewSecurePass123!"
+        }
+        
+        Response 200:
+        {
+            "message": "Le mot de passe a été réinitialisé avec succès."
+        }
     """
     serializer_class = PasswordResetConfirmSerializer
 
     def post(self, request):
+        """
+        Confirme et complète la réinitialisation de mot de passe.
+        
+        Cette méthode constitue la deuxième étape du processus reset password :
+        1. Valide le nouveau mot de passe via PasswordResetConfirmSerializer.validate_password()
+        2. Décode l'uidb64 depuis base64 pour récupérer l'ID utilisateur
+        3. Récupère l'utilisateur en base de données
+        4. Vérifie que le token est valide et n'a pas expiré
+        5. Met à jour le mot de passe de l'utilisateur de manière sécurisée
+        6. Retourne un message de succès
+        
+        Le processus inclut plusieurs couches de validation et de sécurité :
+        - Validation du mot de passe dans le serializer (avant cette méthode)
+        - Vérification cryptographique du token
+        - Vérification d'expiration du token (timeout par défaut: 24h)
+        - Hachage sécurisé du nouveau mot de passe
+        
+        Args:
+            request (Request): Objet requête DRF contenant uidb64, token, password.
+        
+        Returns:
+            Response: Réponse JSON 200 en cas de succès:
+                {
+                    "message": "Le mot de passe a été réinitialisé avec succès."
+                }
+        
+        Raises:
+            Error 400 (Bad Request):
+                - INVALID_TOKEN: Token invalide, expiré, ou uidb64 invalide/expiré
+                - Message: "Le lien de réinitialisation est invalide ou a expiré."
+            
+            Exceptions capturées:
+                - TypeError: Décodage base64 échoué
+                - ValueError: Décodage base64 échoué
+                - OverflowError: Décodage base64 échoué
+                - User.DoesNotExist: L'utilisateur n'existe pas
+        
+        Security:
+            - Token signé cryptographiquement avec clé secrète Django
+            - Token avec timeout (24h par défaut)
+            - Mot de passe haché avec PBKDF2 (ou bcrypt si configuré)
+            - Utilisateur doit réauthentifier lors de la prochaine connexion
+        
+        Example:
+            >>> response = client.post('/users/password-reset/confirm/', {
+            ...     'uidb64': 'MQ==',
+            ...     'token': 'abcd1234-efgh5678',
+            ...     'password': 'NewSecurePass123!'
+            ... })
+            >>> response.status_code
+            200
+            >>> response.data['message']
+            'Le mot de passe a été réinitialisé avec succès.'
+        """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
