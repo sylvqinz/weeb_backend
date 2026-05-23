@@ -71,3 +71,7 @@ Serveur dispo sur :
 ```text
 http://127.0.0.1:8000/
 ```
+
+## Documentation technique
+
+Les choix d'implémentation déjà réalisés sont résumés dans [IMPLEMENTATION.md](IMPLEMENTATION.md).
