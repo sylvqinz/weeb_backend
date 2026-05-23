@@ -4,6 +4,7 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from rest_framework import generics, status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -11,6 +12,8 @@ from .serializers import CustomTokenObtainPairSerializer, UserRegisterSerializer
     PasswordResetRequestSerializer, PasswordResetConfirmSerializer
 
 User = get_user_model()
+
+
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
     Vue personnalisée pour l'obtention de tokens JWT d'authentification.
@@ -53,6 +56,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         }
     """
     serializer_class = CustomTokenObtainPairSerializer
+    # Route publique : un utilisateur doit pouvoir se connecter sans token JWT.
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
         """
@@ -110,7 +115,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             response.data = {
                 "message": "Connexion réussie",
                 "access": access_token,
-                "user": UserSerializer(request.user).data  # ← Ici !
+                "user": UserSerializer(request.user).data  
             }
 
         return response
@@ -159,6 +164,8 @@ class RegisterView(generics.CreateAPIView):
         }
     """
     serializer_class = UserRegisterSerializer
+    # Route publique : un visiteur doit pouvoir créer un compte sans être connecté.
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         """
@@ -266,6 +273,8 @@ class RequestPasswordResetEmailView(generics.GenericAPIView):
         }
     """
     serializer_class = PasswordResetRequestSerializer
+    # Route publique : permet de demander un reset password sans être connecté.
+    permission_classes = [AllowAny]
 
     def post(self, request):
         """
@@ -375,6 +384,8 @@ class PasswordResetConfirmView(generics.GenericAPIView):
         }
     """
     serializer_class = PasswordResetConfirmSerializer
+    # Route publique : permet de finaliser le reset password depuis le lien reçu.
+    permission_classes = [AllowAny]
 
     def post(self, request):
         """
