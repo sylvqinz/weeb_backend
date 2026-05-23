@@ -144,6 +144,11 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
+    # Par défaut, toutes les routes API demandent un utilisateur connecté.
+    # Les vues publiques doivent déclarer explicitement permission_classes = [AllowAny].
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
 }
 
 SIMPLE_JWT = {
