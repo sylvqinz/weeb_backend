@@ -1,6 +1,9 @@
+import logging
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.core.mail import send_mail
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from rest_framework import generics, status
@@ -12,6 +15,7 @@ from .serializers import CustomTokenObtainPairSerializer, UserRegisterSerializer
     PasswordResetRequestSerializer, PasswordResetConfirmSerializer
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -247,7 +251,7 @@ class RequestPasswordResetEmailView(generics.GenericAPIView):
     
     Hérite de GenericAPIView. Reçoit l'email de l'utilisateur, valide son existence,
     génère les éléments de réinitialisation (uidb64 et token), et envoie un lien
-    de confirmation par email (actuellement affiché en console pour les tests).
+    de confirmation par email.
     
     Implémente une sécurité importante : la réponse est générique peu importe si
     l'email existe ou non, cela empêche l'énumération d'utilisateurs (user enumeration attack).
@@ -285,7 +289,7 @@ class RequestPasswordResetEmailView(generics.GenericAPIView):
         2. Cherche l'utilisateur (silencieusement, sans révéler son existence)
         3. Si trouvé : génère les éléments du lien (uidb64 encodé en base64, token signé)
         4. Construits l'URL complète pour le frontend React
-        5. Envoie un email avec le lien (TODO: intégrer vrai service d'email)
+        5. Envoie un email avec le lien de réinitialisation
         6. Retourne une réponse générique TOUJOURS (même si email inexistant)
         
         Cette approche sécurisée empêche l'énumération d'utilisateurs : un attaquant
@@ -305,10 +309,6 @@ class RequestPasswordResetEmailView(generics.GenericAPIView):
             - uidb64: ID utilisateur encodé en base64 (URL-safe)
             - token: Token cryptographique signé généré par Django
             Format: {frontend_url}/reset-password?uidb64={uidb64}&token={token}
-        
-        TODO:
-            - Remplacer le print() par un vrai envoi d'email
-            - Intégrer un service SMTP (SendGrid, AWS SES, Django Mail, etc.)
         
         Example:
             >>> response = client.post('/users/password-reset/request/', {
@@ -338,11 +338,25 @@ class RequestPasswordResetEmailView(generics.GenericAPIView):
             frontend_url = settings.FRONTEND_URL
             reset_url = f"{frontend_url}/reset-password?uidb64={uidb64}&token={token}"
 
-            # TODO: Envoyer l'email réel ici avec le lien
-            # Pour l'instant, affiche dans la console pour les tests
-            print(f"\n--- EMAIL DE RÉINITIALISATION ENVOYÉ À {user.email} ---")
-            print(f"Lien de réinitialisation : {reset_url}")
-            print("-------------------------------------------------------\n")
+            subject = "Réinitialisation de votre mot de passe"
+            message = (
+                "Bonjour,\n\n"
+                "Vous avez demandé la réinitialisation de votre mot de passe.\n"
+                f"Cliquez sur ce lien pour choisir un nouveau mot de passe : {reset_url}\n\n"
+                "Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.\n\n"
+                "L'équipe Weeb"
+            )
+
+            try:
+                send_mail(
+                    subject=subject,
+                    message=message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    fail_silently=False,
+                )
+            except Exception:
+                logger.exception("Erreur lors de l'envoi de l'email de reset password.")
 
         # Réponse générique TOUJOURS, peu importe si l'email existe ou non
         # Cela empêche l'énumération d'utilisateurs (user enumeration attack)
