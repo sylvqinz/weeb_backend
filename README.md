@@ -56,7 +56,13 @@ pip install -r requirements.txt
 
 ### Créer le .env
 
-Créer un fichier `.env` à la racine du projet avec les variables disponible sur le drive
+Créer un fichier `.env` à la racine du projet à partir du template :
+
+```bash
+cp .env.example .env
+```
+
+Puis remplir les variables avec les valeurs disponibles sur le drive ou fournies par l'équipe.
 
 Variables email utiles pour le reset password :
 

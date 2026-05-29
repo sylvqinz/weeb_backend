@@ -161,6 +161,9 @@ SIMPLE_JWT = {
 
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 
+# Durée de validité des tokens de reset password Django : 2 heures.
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 2
+
 # Email
 # En local, le backend console affiche les emails dans le terminal.
 # En production, définir EMAIL_BACKEND et les variables SMTP dans l'environnement.
