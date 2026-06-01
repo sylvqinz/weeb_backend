@@ -54,6 +54,7 @@ POST /users/register/
 POST /users/login/
 POST /users/password-reset/request/
 POST /users/password-reset/confirm/
+POST /contact/
 ```
 
 ## Rôle du frontend
